@@ -125,18 +125,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // Executa o movimento de dobra apenas se o mouse/dedo se mover além de um limiar (threshold)
         const handleMove = (clientX, clientY, isTouch = false) => {
             if (!isClicking || !activeDragPage) return;
-            
+
             const deltaX = clientX - startX;
             const deltaY = clientY - startY;
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
+
             const bookRect = bookElement.getBoundingClientRect();
 
             // Só ativa o flip se mover mais de 10px (evita disparar ao clicar e soltar estático)
             if (distance > 10 && !dragStarted) {
                 dragStarted = true;
                 let cornerX, cornerY;
-                
+
                 // Determina canto vertical (topo vs base) em coordenadas relativas ao livro
                 const centerY = bookRect.top + bookRect.height / 2;
                 if (startY < centerY) {
@@ -151,11 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     cornerX = 0; // Canto esquerdo
                 }
-                
+
                 document.body.classList.add("dragging");
                 pageFlip.startUserTouch({ x: cornerX, y: cornerY });
             }
-            
+
             if (dragStarted) {
                 const relX = clientX - bookRect.left;
                 const relY = clientY - bookRect.top;

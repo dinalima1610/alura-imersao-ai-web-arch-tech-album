@@ -1,6 +1,10 @@
 # 🏆 Alura Album - Copa do Mundo Tech
 
-O **Alura Album - Copa do Mundo Tech** é um álbum virtual de figurinhas interativo e moderno, desenvolvido para celebrar a história e os grandes nomes da tecnologia nacional e internacional. Este projeto foi criado no contexto da **Imersão AI - Web Arch** da Alura.
+O **Alura Album - Copa do Mundo Tech** é um álbum virtual de figurinhas interativo e moderno, desenvolvido para celebrar a história e os grandes nomes da tecnologia nacional e internacional. 
+
+Este projeto foi criado no contexto da **Imersão Arquitetura Web com IA** da Alura.
+
+Veja o álbum [aqui](https://dinalima1610.github.io/alura-imersao-ai-web-arch-tech-album/frontend/).
 
 ---
 
@@ -54,17 +58,20 @@ Contém toda a lógica e interatividade do sistema do álbum.
 O backend foi iniciado utilizando **FastAPI** para fornecer uma API robusta e rápida.
 
 #### 1. 🐍 [main.py](backend/main.py)
-Contém a inicialização da aplicação web e a definição de rotas.
+Contém a inicialização da aplicação web, configuração de CORS, serviço de arquivos estáticos e definição de rotas.
 - **Servidor FastAPI:** Configurado para rodar localmente com recarregamento automático (reload).
+- **Habilitação de CORS:** Permite que o frontend faça requisições HTTP para a API local sem bloqueios do navegador.
+- **Serviço de Imagens Estáticas:** Monta a pasta de imagens local (`/figurinhas`) sob o caminho `/imgs` para servir as mídias das figurinhas.
 - **Rota Inicial (`GET /`):** Retorna uma mensagem de boas-vindas em formato JSON: `{"mensagem": "Olá, mundo! 🌍"}`.
+- **Rota de Figurinhas (`GET /figurinhas`):** Retorna a lista JSON com as figurinhas cadastradas (atualmente contendo os dados dos dois primeiros personagens: Alan Turing e John McCarthy).
 
 ---
 
-### ⚠️ Integração Pendente
+### 🔗 Ligação Backend e Frontend (Pendente de Confirmação)
 
-> [!WARNING]
-> A ligação direta entre o frontend e o backend ainda está pendente de implementação.
-> Atualmente, o script do frontend (`frontend/app.js`) tenta requisitar o endpoint `/figurinhas` na porta `8000`, mas o backend possui apenas a rota inicial `/` configurada. Nas próximas etapas, o backend será expandido para retornar o JSON com as informações das figurinhas e servir os arquivos de imagens.
+> [!NOTE]
+> A ligação e comunicação entre o frontend e o backend foi implementada adiantando-se com as dicas fornecidas durante a **Aula 03**, permitindo ao frontend carregar e exibir as duas primeiras figurinhas vindas diretamente da API.
+> Contudo, a **confirmação e consolidação definitiva desta ligação está pendente**, pois trata-se do escopo oficial da **Aula 04**.
 
 ---
 
