@@ -3,7 +3,14 @@
 // Quando o frontend for servido pelo FastAPI (Dia 3), a API está
 // no mesmo servidor — usamos uma URL relativa ou o endereço completo.
 // ===================================================
-const API_BASE_URL = "http://localhost:8000";
+
+// Verifica se o site está rodando localmente
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+// Define a API com base no ambiente atual
+const API_BASE_URL = isLocalhost
+    ? "http://localhost:8000"
+    : "https://alura-imersao-ai-web-arch-tech-album.vercel.app/";
 
 // ===================================================
 // FUNÇÃO: Preenche os slots do álbum com imagens da API
