@@ -344,4 +344,34 @@ document.addEventListener("DOMContentLoaded", () => {
         // Hide left button initially since start page is 0
         btnPrev.classList.add("hidden");
     }
+
+
+
+    // Seleciona o botão de alternância de tema
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // Função para alternar o tema
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        // Atualiza o ícone do botão
+        updateButtonIcon(newTheme);
+    }
+
+    // Função para atualizar o ícone do botão
+    function updateButtonIcon(theme) {
+        themeToggle.textContent = theme === 'light' ? '☀️' : '🌙';
+    }
+
+    // Verifica o tema salvo no localStorage ao carregar a página
+    const savedTheme = localStorage.getItem('theme') || 'dark'; // Padrão dark
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateButtonIcon(savedTheme);
+
+    // Adiciona evento de clique ao botão
+    themeToggle.addEventListener('click', toggleTheme);
 });

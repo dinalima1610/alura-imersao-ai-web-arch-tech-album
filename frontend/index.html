@@ -13,21 +13,31 @@
         rel="stylesheet">
     <!-- Style -->
     <link rel="stylesheet" href="style.css">
+
+    <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 
 <body>
+    <!-- Theme Toggle -->
+    <div class="tooltip-container pos-theme-toggle">
+        <button id="theme-toggle" aria-label="Alternar entre modo escuro e claro">☀️</button>
+        <span class="tooltip-text">Alternar tema</span>
+    </div>
 
     <!-- Sound Control -->
-    <button id="sound-toggle" class="sound-btn" aria-label="Alternar som">
-        <svg class="sound-icon-on" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="currentColor"
-                d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
-        </svg>
-        <svg class="sound-icon-off hidden" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="currentColor"
-                d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.5C15.58,18 14.83,18.4 14,18.71V20.77C15.38,20.44 16.63,19.78 17.7,18.9L20.73,21.93L22,20.66L4.27,3M14,3.23V5.29C14.73,5.5 15.43,5.83 16.07,6.26L14.59,7.74C14.41,7.65 14.21,7.58 14,7.54V9.54L19,14.54C19,13.7 19,12.85 19,12C19,7.72 16,4.14 14,3.23M16.5,12C16.5,11.2 16.1,10.5 15.5,10.05L14,11.55V12.45L15.46,13.9C15.48,13.28 16.5,12.62 16.5,12Z" />
-        </svg>
-    </button>
+    <div class="tooltip-container pos-sound-toggle">
+        <button id="sound-toggle" class="sound-btn" aria-label="Alternar som">
+            <svg class="sound-icon-on" viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor"
+                    d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+            </svg>
+            <svg class="sound-icon-off hidden" viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor"
+                    d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.5C15.58,18 14.83,18.4 14,18.71V20.77C15.38,20.44 16.63,19.78 17.7,18.9L20.73,21.93L22,20.66L4.27,3M14,3.23V5.29C14.73,5.5 15.43,5.83 16.07,6.26L14.59,7.74C14.41,7.65 14.21,7.58 14,7.54V9.54L19,14.54C19,13.7 19,12.85 19,12C19,7.72 16,4.14 14,3.23M16.5,12C16.5,11.2 16.1,10.5 15.5,10.05L14,11.55V12.45L15.46,13.9C15.48,13.28 16.5,12.62 16.5,12Z" />
+            </svg>
+        </button>
+        <span class="tooltip-text">Alternar som</span>
+    </div>
 
     <!-- Navigation Arrows -->
     <button id="btn-prev" class="nav-btn nav-btn-left" aria-label="Página Anterior">
@@ -86,6 +96,7 @@
                     </div>
                     <div class="cover-footer">
                         <span>2026 IMERSÃO JULHO</span>
+                        <span class="cover-back-footer-by">by Diná Lima</span>
                     </div>
                 </div>
             </div>
@@ -310,8 +321,8 @@
                         </div>
                         <div class="sticker-slot">
                             <div class="slot-number">#30</div>
-                            <div class="slot-name">Você</div>
-                            <div class="slot-role">Coloque sua figurinha aqui!</div>
+                            <div class="slot-name">Diná Lima</div>
+                            <div class="slot-role">Dev Full Stack</div>
                         </div>
                     </div>
                     <div class="page-footer">Pág. 6</div>
@@ -353,6 +364,8 @@
                     <div class="cover-back-footer">
                         <span>Imersão Julho • Alura • 2026</span>
                     </div>
+
+
                 </div>
             </div>
 
@@ -360,7 +373,7 @@
     </div>
 
     <!-- Page Flip Library -->
-    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+    <script src=" https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
     <!-- Logic -->
     <script src="app.js"></script>
 </body>

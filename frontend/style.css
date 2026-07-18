@@ -5,6 +5,39 @@
   --color-dev-blue: #00b5ad;
   --color-new-black: #0D0D0D;
   --color-white-snow: #F4F5F6;
+  --color-deep-cyan: #00f0ff;
+}
+
+/* Tema claro */
+[data-theme="light"] {
+  /* O antigo "branco neve" agora é o fundo principal */
+  --color-blue-universe: #F4F5F6;
+
+  /* Um tom cinza-azulado bem claro para superfícies secundárias (cards, sidebars) */
+  --color-deep-blue: #99B2B5;
+
+  /* Um azul médio/suave para bordas, divisores ou elementos desativados */
+  --color-tech-blue: #00b5ad;
+
+  /* O azul de destaque (dev-blue) ganha um pouco mais de contraste para passar nos testes de acessibilidade sobre fundo claro */
+  --color-dev-blue: #006e7a;
+
+  /* Azul escuro profundo para textos secundários ou subtítulos */
+  --color-new-black: #003840;
+
+  /* O antigo "quase preto" vira a cor principal para textos longos e títulos */
+  --color-white-snow: #0D0D0D;
+
+  --color-deep-cyan: #F4F5F6;
+
+  /*
+  --color-blue-universe: #F4F5F6;
+  --color-deep-blue: #E1E6E8;
+  --color-tech-blue: #99B2B5;
+  --color-dev-blue: #008A84;
+  --color-new-black: #003840;
+  --color-white-snow: #0D0D0D;
+  */
 }
 
 * {
@@ -26,29 +59,106 @@ body {
   position: relative;
 }
 
-/* Sound & Control UI */
-.sound-btn {
+/* O botão foca apenas no visual dele */
+#theme-toggle {
+  background: rgba(1, 12, 83, 0.4);
+  color: var(--color-white-snow);
+  border: 1px solid rgba(31, 83, 229, 0.3);
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Efeito de hover do botão */
+#theme-toggle:hover {
+  opacity: 1;
+  background: var(--color-deep-blue);
+  border-color: var(--color-dev-blue);
+  box-shadow: 0 0 20px rgba(31, 83, 229, 0.5);
+  transform: scale(1.05);
+}
+
+.tooltip-container {
+  position: relative;
+  z-index: 99;
+  /* Garante que o container tenha o tamanho exato do botão */
+  display: inline-block;
+}
+
+/* Posicionamento do container dos botões */
+.pos-theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 80px;
+}
+
+.pos-sound-toggle {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(31, 83, 229, 0.15);
-  border: 1px solid rgba(31, 83, 229, 0.4);
+}
+
+/* Configuração do Hint (Tooltip) */
+.tooltip-container .tooltip-text {
+  visibility: hidden;
+  position: absolute;
+  top: 115%;
+  /* Ajustado para flutuar um pouco acima do botão */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-deep-blue);
+  color: var(--color-deep-cyan);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  /* Evita que o mouse bugue ao passar por cima do texto */
+  pointer-events: none;
+  /* Garante que o texto fique acima do botão */
+  z-index: 95;
+}
+
+/* Mostra o hint ao passar o mouse no container */
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  /* Efeito suave de subida ao aparecer */
+  transform: translateX(-50%) translateY(-4px);
+}
+
+
+/* Sound & Control UI */
+.sound-btn {
+  position: relative;
+  background: rgba(1, 12, 83, 0.4);
+  border: 1px solid rgba(31, 83, 229, 0.3);
   color: var(--color-white-snow);
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   cursor: pointer;
   z-index: 100;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .sound-btn:hover {
-  background: var(--color-dev-blue);
-  border-color: var(--color-white-snow);
-  box-shadow: 0 0 15px rgba(31, 83, 229, 0.6);
+  opacity: 1;
+  background: var(--color-deep-blue);
+  border-color: var(--color-dev-blue);
+  box-shadow: 0 0 20px rgba(31, 83, 229, 0.5);
   transform: scale(1.05);
 }
 
@@ -320,23 +430,49 @@ body.dragging * {
 }
 
 /* Esconde número e role quando há imagem no slot */
-.sticker-slot:has(.sticker-img) .slot-number,
-.sticker-slot:has(.sticker-img) .slot-role {
+.sticker-slot:has(.sticker-img) .slot-number
+
+/*,
+.sticker-slot:has(.sticker-img) .slot-role */
+  {
   display: none;
 }
 
-/* Nome como overlay centralizado na base da imagem */
+.sticker-slot:has(.sticker-img) .slot-role {
+  display: block;
+}
+
+/* Nome como overlay centralizado na topo da imagem */
 .sticker-slot:has(.sticker-img) .slot-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 5px 8px 7px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, transparent 100%);
+  border-radius: 0 0 4px 4px;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* Legado como overlay centralizado na base da imagem */
+.sticker-slot:has(.sticker-img) .slot-role {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 2;
+  z-index: 3;
   text-align: center;
   color: #fff;
   font-size: 0.78rem;
-  font-weight: 600;
-  padding: 18px 8px 7px;
+  font-weight: 200;
+  padding: 18px 3px 7px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, transparent 100%);
   border-radius: 0 0 4px 4px;
   letter-spacing: 0.2px;
@@ -381,10 +517,13 @@ body.dragging * {
 
 /* CAPA (Cover) CSS */
 .page-cover {
-  background-color: #070709;
-  background-image: radial-gradient(circle at center, #0e1220 0%, #060608 100%);
+  /*background-color: #070709;*/
+  background-color: var(--color-blue-universe);
+  /*background-image: radial-gradient(circle at center, #0e1220 0%, #060608 100%);*/
+  background-image: radial-gradient(circle at center, var(--color-blue-universe) 0%, var(--color-new-black) 100%);
   color: var(--color-white-snow);
-  border: 1px solid rgba(0, 240, 255, 0.2);
+  /*border: 1px solid rgba(0, 240, 255, 0.2);*/
+  border: 3px solid var(--color-dev-blue);
   box-shadow: inset 0 0 40px rgba(0, 240, 255, 0.12);
 }
 
@@ -957,6 +1096,18 @@ body.dragging * {
   opacity: 0.5;
 }
 
+.cover-back-footer-by {
+  letter-spacing: 2px;
+  opacity: 0.5;
+
+  background: rgba(0, 240, 255, 0.04);
+  color: #00f0ff;
+  font-size: 0.72rem;
+  font-weight: 200;
+  padding: 6px 18px;
+  display: block;
+}
+
 /* Responsiveness & Mobile Adaptations */
 @media (max-width: 1200px) {
   .album-viewport {
@@ -1129,9 +1280,31 @@ body.dragging * {
   }
 
   .sound-btn {
+    width: 44px;
+    height: 44px;
+    opacity: 0.4;
+  }
+
+  #theme-toggle {
+    /* Reduz largura do botão em telas pequenas */
+    width: 44px;
+    /* Reduz altura do botão em telas pequenas */
+    height: 44px;
+    /* Reduz tamanho da fonte do botão */
+    font-size: 1.2rem;
+    opacity: 0.4;
+  }
+
+  /* Posicionamento do container dos botões */
+  .pos-theme-toggle {
+    position: absolute;
     top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
+    right: 70px;
+  }
+
+  .pos-sound-toggle {
+    position: absolute;
+    top: 10px;
+    right: 20px;
   }
 }

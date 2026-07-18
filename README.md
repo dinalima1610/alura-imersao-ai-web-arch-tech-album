@@ -22,7 +22,7 @@ O objetivo principal do projeto é oferecer uma experiência imersiva e interati
 
 ## 🛠️ Estrutura e Componentes do Projeto
 
-O projeto agora está dividido de forma organizada em **frontend**, uma arquitetura limpa baseada em **HTML5**, **CSS3** e **JavaScript**, e **backend**, embora a ligação de dados automática entre os dois ainda esteja pendente.
+O projeto está dividido de forma organizada e integrada em **frontend** (uma arquitetura limpa baseada em **HTML5**, **CSS3** e **JavaScript** puro) e **backend** (baseado em **FastAPI**), permitindo o carregamento dinâmico de figurinhas e troca de temas de forma fluida.
 
 ### 🎨 Frontend (`/frontend`)
 
@@ -31,12 +31,13 @@ O frontend é construído em uma arquitetura limpa baseada em **HTML5**, **CSS3*
 #### 1. 📄 [index.html](frontend/index.html)
 Estrutura semântica principal da aplicação.
 - Define a disposição física das páginas do álbum (Capa, Páginas de Categorias com seus respectivos slots de figurinhas, e Contracapa).
+- Contém o botão de alternância de tema (`#theme-toggle`) para alternar entre os modos escuro e claro.
 - Carrega as fontes do Google Fonts (`Inter` e `Outfit`) e vincula os estilos e scripts de lógica.
 - Importa a biblioteca externa `St.PageFlip` a partir de uma CDN para habilitar o efeito tridimensional de folheação do livro físico.
 
 #### 2. 🎨 [style.css](frontend/style.css)
 Responsável por toda a parte visual, animações e responsividade da interface.
-- **Sistema de Cores Dinâmico (`:root`):** Utiliza variáveis CSS personalizadas configuradas com tons de **Teal** (verde-azulado), fornecendo uma estética tecnológica e elegante.
+- **Sistema de Temas e Cores Dinâmico (`:root` e `[data-theme="light"]`):** Utiliza variáveis CSS personalizadas. O tema padrão é o escuro (azul tech sobre fundo escuro) e o tema claro (com cores de contraste adaptadas) é aplicado dinamicamente usando a diretiva `[data-theme="light"]`.
 - **Efeitos e Animações Premium:**
   - **Glitch Text Effect:** Efeito visual na tipografia da capa (`ALURA ALBUM`).
   - **Seal Shine:** Animação de brilho metálico no selo de autenticidade da capa.
@@ -46,7 +47,8 @@ Responsável por toda a parte visual, animações e responsividade da interface.
 
 #### 3. ⚙️ [app.js](frontend/app.js)
 Contém toda a lógica e interatividade do sistema do álbum.
-- **Integração com API Backend:** Busca a lista de figurinhas disponíveis a partir de uma API externa (`http://localhost:8000/figurinhas`). Se a figurinha correspondente ao slot estiver cadastrada e ativa no backend, ela é inserida no slot em tempo de execução via manipulação de DOM.
+- **Integração Dinâmica com a API:** Busca a lista de figurinhas em tempo de execução via API local (`http://localhost:8000/figurinhas`). Se a figurinha correspondente ao slot estiver cadastrada e ativa no backend, preenche o slot dinamicamente com a imagem disponibilizada pelo servidor.
+- **Alternância de Tema (Desafio 1):** Gerencia a troca de tema claro/escuro ao clicar no botão de alternar tema, aplicando o atributo correspondente no elemento raiz (`html`) e persistindo a escolha no `localStorage` do navegador para manter o tema escolhido após atualizações de página.
 - **Efeito de Folheamento Interativo (`St.PageFlip`):** Configura os parâmetros de transição, sombra e limites de arrasto de página por mouse e toque para dispositivos móveis.
 - **Síntese de Áudio (Web Audio API):** Gera dinamicamente, por meio de código, o som de uma folha de papel virando (ruído branco filtrado por filtros passa-banda e passa-baixa). Não requer arquivos de som externos.
 - **Controle de Navegação e Atalhos:** Mapeamento de setas do teclado (Esquerda/Direita), setas na interface visual e botões de controle de volume (Mudo/Som ativo).
@@ -55,23 +57,30 @@ Contém toda a lógica e interatividade do sistema do álbum.
 
 ### 💻 Backend (`/backend`)
 
-O backend foi iniciado utilizando **FastAPI** para fornecer uma API robusta e rápida.
+O backend foi desenvolvido utilizando **FastAPI** para fornecer uma API robusta, rápida e assíncrona.
 
 #### 1. 🐍 [main.py](backend/main.py)
 Contém a inicialização da aplicação web, configuração de CORS, serviço de arquivos estáticos e definição de rotas.
 - **Servidor FastAPI:** Configurado para rodar localmente com recarregamento automático (reload).
 - **Habilitação de CORS:** Permite que o frontend faça requisições HTTP para a API local sem bloqueios do navegador.
-- **Serviço de Imagens Estáticas:** Monta a pasta de imagens local (`/figurinhas`) sob o caminho `/imgs` para servir as mídias das figurinhas.
+- **Serviço de Imagens Estáticas Dinâmico (`GET /figurinhas/{id}/imagem`):** Retorna o arquivo de imagem correspondente a cada figurinha de forma dinâmica por ID, buscando na pasta `figurinhas` pelo padrão do arquivo e entregando via `FileResponse`.
 - **Rota Inicial (`GET /`):** Retorna uma mensagem de boas-vindas em formato JSON: `{"mensagem": "Olá, mundo! 🌍"}`.
-- **Rota de Figurinhas (`GET /figurinhas`):** Retorna a lista JSON com as figurinhas cadastradas (atualmente contendo os dados dos dois primeiros personagens: Alan Turing e John McCarthy).
+- **Rota de Figurinhas (`GET /figurinhas`):** Retorna a lista completa em formato JSON com todas as 30 figurinhas cadastradas (contendo ID, nome, categoria e link dinâmico da imagem).
 
 ---
 
-### 🔗 Ligação Backend e Frontend (Pendente de Confirmação)
+### 🔗 Ligação Backend e Frontend (Concluída na Aula 04)
 
-> [!NOTE]
-> A ligação e comunicação entre o frontend e o backend foi implementada adiantando-se com as dicas fornecidas durante a **Aula 03**, permitindo ao frontend carregar e exibir as duas primeiras figurinhas vindas diretamente da API.
-> Contudo, a **confirmação e consolidação definitiva desta ligação está pendente**, pois trata-se do escopo oficial da **Aula 04**.
+A integração completa entre o frontend e o backend foi consolidada com sucesso durante a **Aula 04**. O frontend se comunica diretamente com a API do FastAPI para buscar a lista de todas as 30 figurinhas e suas respectivas imagens. As figurinhas agora são carregadas e coladas nos slots corretos de acordo com a resposta do backend.
+
+---
+
+### 🌓 Desafios Concluídos
+
+#### **Desafio 1: Alternar Tema do Álbum**
+- **HTML:** Adicionado o botão `#theme-toggle` no [index.html](frontend/index.html) para alternar o tema.
+- **CSS:** Criação da variação `[data-theme="light"]` no [style.css](frontend/style.css) utilizando variáveis de cor adaptadas para garantir ótima legibilidade e acessibilidade.
+- **JavaScript:** Manipulação do DOM no [app.js](frontend/app.js) para alternar o atributo `data-theme` no `document.documentElement` sem recarregar a página, além de persistir a escolha no `localStorage`.
 
 ---
 
