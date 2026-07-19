@@ -23,6 +23,7 @@ app.add_middleware(
 # a pasta independente de onde for executado)
 PASTA_BASE = os.path.dirname(os.path.abspath(__file__))
 PASTA_IMAGENS = os.path.join(PASTA_BASE, "figurinhas")
+PASTA_THUMBS = os.path.join(PASTA_IMAGENS, "thumbs")
 
 # Configura os arquivos estáticos: "monte" a pasta PASTA_IMAGENS na rota "/imgs"
 # usando StaticFiles, com name="imgs"
@@ -68,9 +69,9 @@ figurinhas = [
     {"id": 23, "nome": "Gus",                 "categoria": "Alura",             "imagem_url": "/figurinhas/23/imagem"},
     {"id": 24, "nome": "Mauricio",            "categoria": "Alura",             "imagem_url": "/figurinhas/24/imagem"},
     {"id": 25, "nome": "Andre",               "categoria": "Alura",             "imagem_url": "/figurinhas/25/imagem"},
-    {"id": 26, "nome": "Guilherme",           "categoria": "Alura",             "imagem_url": "/figurinhas/26/imagem"},
+    {"id": 26, "nome": "Gui",                 "categoria": "Alura",             "imagem_url": "/figurinhas/26/imagem"},
     {"id": 27, "nome": "Gi",                  "categoria": "Alura",             "imagem_url": "/figurinhas/27/imagem"},
-    {"id": 28, "nome": "Vinicius",            "categoria": "Alura",             "imagem_url": "/figurinhas/28/imagem"},
+    {"id": 28, "nome": "Vini    ",            "categoria": "Alura",             "imagem_url": "/figurinhas/28/imagem"},
     {"id": 29, "nome": "Rafa",                "categoria": "Alura",             "imagem_url": "/figurinhas/29/imagem"},
     {"id": 30, "nome": "Di",                  "categoria": "Dev",               "imagem_url": "/figurinhas/30/imagem"},
 ]
@@ -79,7 +80,14 @@ figurinhas = [
 @app.get("/figurinhas")
 def listar_figurinhas():
     # Retorna a lista de figurinhas, convertida automaticamente para JSON pelo FastAPI
-    return [figurinha for figurinha in figurinhas if isinstance(figurinha, dict)]
+    return [
+        {
+            **figurinha,
+            "thumb_url": f"/figurinhas/{figurinha['id']}/thumb"
+        }
+        for figurinha in figurinhas
+        if isinstance(figurinha, dict)
+    ]
 
 @app.get("/figurinhas/total")
 def estatisticas_album(total_album: int = 0):
@@ -104,6 +112,16 @@ def imagem_da_figurinha(id: int):
         raise HTTPException(status_code=404, detail="Figurinha não encontrada")
 
     # Entrega os bytes da imagem (o FastAPI descobre o Content-Type pela extensão)
+    return FileResponse(arquivos[0])
+
+@app.get("/figurinhas/{id}/thumb")
+def thumb_da_figurinha(id: int):
+    padrao = os.path.join(PASTA_THUMBS, f"{id:02d}-thumb.*")
+    arquivos = glob(padrao)
+
+    if not arquivos:
+        raise HTTPException(status_code=404, detail="Thumbnail da figurinha não encontrada")
+
     return FileResponse(arquivos[0])
 
 @app.get("/figurinhas/{id}/exibir")

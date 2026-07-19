@@ -27,6 +27,7 @@ O álbum está dividido em categorias históricas de grande relevância para a c
 - Álbum digital com efeito de livro físico usando a biblioteca `St.PageFlip`.
 - Carregamento dinâmico das figurinhas a partir de uma API FastAPI.
 - Exibição das imagens das figurinhas por endpoint dinâmico.
+- Uso de thumbnails nos slots do álbum para reduzir o peso inicial da página.
 - Busca de figurinhas por **ID**, **nome** ou **contribuição**.
 - Destaque visual da figurinha encontrada e navegação automática até sua página.
 - Zoom da figurinha ao clicar em um slot preenchido.
@@ -78,7 +79,7 @@ Contém a lógica e interatividade do álbum.
   - local: `http://localhost:8000`;
   - produção: `https://alura-imersao-ai-web-arch-tech-album.vercel.app`.
 - Busca a lista de figurinhas via `GET /figurinhas`.
-- Preenche os slots do álbum com as imagens retornadas pela API.
+- Preenche os slots do álbum com thumbnails retornadas pela API.
 - Implementa pesquisa por ID, nome ou contribuição.
 - Consulta a API para validar a figurinha pesquisada por ID.
 - Destaca a figurinha encontrada e navega até a página correspondente.
@@ -114,6 +115,7 @@ Contém a inicialização da aplicação, configuração de CORS, lista de figur
 | `GET` | `/figurinhas` | Lista todas as figurinhas cadastradas. |
 | `GET` | `/figurinhas/{id}` | Busca uma figurinha específica pelo ID. |
 | `GET` | `/figurinhas/{id}/imagem` | Retorna a imagem da figurinha pelo ID. |
+| `GET` | `/figurinhas/{id}/thumb` | Retorna a thumbnail usada no slot do álbum. |
 | `GET` | `/figurinhas/{id}/exibir` | Retorna os dados usados na exibição ampliada da figurinha. |
 | `GET` | `/figurinhas/total?total_album=30` | Retorna total do álbum, figurinhas coladas e faltantes. |
 
@@ -171,8 +173,10 @@ O arquivo [vercel.json](vercel.json) configura o deploy do backend apontando par
 - Correção do botão de navegação que não voltava corretamente em modo mobile.
 - Ajustes simples apontados pelo Lighthouse:
   - favicon com caminho compatível com GitHub Pages;
+  - favicon reduzido para um arquivo leve;
   - scripts carregados com `defer`;
   - criação de landmark principal com `<main>`;
+  - thumbnails para reduzir o peso inicial das figurinhas;
   - metadescrição para SEO.
 
 ---
@@ -224,10 +228,8 @@ Uma avaliação inicial no Google Lighthouse indicou bons resultados gerais, com
 Melhorias futuras possíveis:
 
 - otimizar imagens pesadas das figurinhas;
-- gerar thumbnails para o álbum e manter imagens maiores apenas para zoom;
 - carregar imagens sob demanda conforme a página visível;
 - reduzir animações contínuas em dispositivos móveis;
 - revisar pesos de fontes carregados do Google Fonts.
 
 ---
-

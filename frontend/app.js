@@ -48,7 +48,7 @@ async function preencherFigurinhas() {
             const figurinha = porId.get(id);
 
             const img = document.createElement("img");
-            img.src = `${API_BASE_URL}${figurinha.imagem_url}`;
+            img.src = `${API_BASE_URL}${figurinha.thumb_url || figurinha.imagem_url}`;
             img.alt = figurinha.nome;
             img.className = "sticker-img";
 
@@ -108,36 +108,10 @@ async function exibe_estatisticas() {
 // Esta função é chamada após o álbum ser inicializado.
 // ===================================================
 let albumPageFlip = null;
-let figurinhasSelecionadasAtuais = [];
+let searchMatchesAtuais = [];
+let searchMatchIndexAtual = -1;
 let searchFeedbackElement = null;
-let manterEfeitoNoProximoFlip = false;
 let zoomDialogElement = null;
-
-function formatarIdFigurinha(id) {
-    const idLimpo = String(id).trim();
-
-    if (!/^#?\d+$/.test(idLimpo)) {
-        return null;
-    }
-
-    const idNumerico = Number.parseInt(idLimpo.replace("#", ""), 10);
-
-    if (!Number.isInteger(idNumerico) || idNumerico <= 0) {
-        return null;
-    }
-
-    return {
-        apiId: idNumerico,
-        screenId: `#${String(idNumerico).padStart(2, "0")}`
-    };
-}
-
-function removerEfeitoFigurinhaSelecionada() {
-    figurinhasSelecionadasAtuais.forEach(figurinha => {
-        figurinha.classList.remove("sticker-slot-selecionado");
-    });
-    figurinhasSelecionadasAtuais = [];
-}
 
 function atualizarControlesNavegacao(pageIndex) {
     const btnPrev = document.getElementById("btn-prev");
@@ -151,19 +125,14 @@ function atualizarControlesNavegacao(pageIndex) {
     btnNext.classList.toggle("hidden", pageIndex === totalPages - 1);
 }
 
-function selecionarFigurinhas(figurinhas) {
-    if (!figurinhas.length || !albumPageFlip) return;
+function irParaPaginaDaFigurinha(figurinha) {
+    if (!figurinha || !albumPageFlip) return;
 
-    removerEfeitoFigurinhaSelecionada();
-
-    const primeiraFigurinha = figurinhas[0];
-    const pagina = primeiraFigurinha.closest(".page");
+    const pagina = figurinha.closest(".page");
     const paginas = Array.from(document.querySelectorAll(".page"));
     const pageIndex = paginas.indexOf(pagina);
 
     if (pageIndex >= 0) {
-        manterEfeitoNoProximoFlip = true;
-
         if (typeof albumPageFlip.turnToPage === "function") {
             albumPageFlip.turnToPage(pageIndex);
         } else if (typeof albumPageFlip.flip === "function") {
@@ -172,18 +141,6 @@ function selecionarFigurinhas(figurinhas) {
 
         atualizarControlesNavegacao(pageIndex);
     }
-
-    figurinhas.forEach(figurinha => {
-        figurinha.classList.add("sticker-slot-selecionado");
-    });
-    figurinhasSelecionadasAtuais = figurinhas;
-    window.setTimeout(() => {
-        manterEfeitoNoProximoFlip = false;
-    }, 900);
-}
-
-function selecionarFigurinha(figurinha) {
-    selecionarFigurinhas([figurinha]);
 }
 
 function normalizarTextoPesquisa(texto) {
@@ -194,30 +151,159 @@ function normalizarTextoPesquisa(texto) {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
-function buscarFigurinhasPorTexto(texto) {
-    const termo = normalizarTextoPesquisa(texto);
-    const slots = Array.from(document.querySelectorAll('.sticker-slot'));
+function escaparHtml(texto) {
+    const div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+}
 
-    const porNome = slots.filter(slot => {
-        const nome = normalizarTextoPesquisa(slot.querySelector('.slot-name')?.textContent || "");
-        return nome.includes(termo);
-    });
+function limparRealcesPesquisa() {
+    document.querySelectorAll(".slot-name, .slot-role").forEach(elemento => {
+        const textoOriginal = elemento.dataset.searchOriginalText;
 
-    if (porNome.length) {
-        return porNome;
-    }
-
-    return slots.filter(slot => {
-        const contribuicao = normalizarTextoPesquisa(slot.querySelector('.slot-role')?.textContent || "");
-        return contribuicao.includes(termo);
+        if (textoOriginal !== undefined) {
+            elemento.textContent = textoOriginal;
+        }
     });
 }
 
-function ocultarPopupPesquisa() {
-    const searchDialog = document.getElementById("search-dialog");
-    if (searchDialog) {
-        searchDialog.hidden = true;
+function obterIndicePaginaFigurinha(figurinha) {
+    const pagina = figurinha.closest(".page");
+    const paginas = Array.from(document.querySelectorAll(".page"));
+    return paginas.indexOf(pagina);
+}
+
+function obterPaginaAtualPesquisa() {
+    if (!albumPageFlip) return 0;
+    return albumPageFlip.getCurrentPageIndex();
+}
+
+function buscarOcorrenciasPesquisa(texto) {
+    const termoOriginal = String(texto).trim();
+    const termoNormalizado = normalizarTextoPesquisa(termoOriginal);
+
+    if (!termoNormalizado) return [];
+
+    const slots = Array.from(document.querySelectorAll(".sticker-slot"));
+    const ocorrencias = [];
+
+    slots.forEach(slot => {
+        [".slot-name", ".slot-role"].forEach(selector => {
+            const elemento = slot.querySelector(selector);
+            const textoCampo = elemento?.dataset.searchOriginalText ?? elemento?.textContent ?? "";
+            const textoNormalizado = normalizarTextoPesquisa(textoCampo);
+            const indice = textoNormalizado.indexOf(termoNormalizado);
+
+            if (elemento && indice >= 0) {
+                ocorrencias.push({
+                    slot,
+                    elemento,
+                    pageIndex: obterIndicePaginaFigurinha(slot),
+                    exact: textoNormalizado === termoNormalizado,
+                    term: termoOriginal
+                });
+            }
+        });
+    });
+
+    return ocorrencias;
+}
+
+function realcarElementoPesquisa(elemento, termo, ativo) {
+    if (!elemento.dataset.searchOriginalText) {
+        elemento.dataset.searchOriginalText = elemento.textContent;
     }
+
+    const textoOriginal = elemento.dataset.searchOriginalText;
+    const classeAtiva = ativo ? " search-match-active" : "";
+    const termoNormalizado = normalizarTextoPesquisa(termo);
+    const mapa = [];
+    let textoNormalizado = "";
+
+    Array.from(textoOriginal).forEach((char, originalIndex) => {
+        const normalizado = normalizarTextoPesquisa(char);
+
+        Array.from(normalizado).forEach(normalizedChar => {
+            textoNormalizado += normalizedChar;
+            mapa.push(originalIndex);
+        });
+    });
+
+    const ranges = [];
+    let buscaInicio = 0;
+
+    while (termoNormalizado && buscaInicio <= textoNormalizado.length) {
+        const indice = textoNormalizado.indexOf(termoNormalizado, buscaInicio);
+
+        if (indice < 0) break;
+
+        const inicioOriginal = mapa[indice];
+        const fimOriginal = (mapa[indice + termoNormalizado.length - 1] ?? inicioOriginal) + 1;
+        ranges.push([inicioOriginal, fimOriginal]);
+        buscaInicio = indice + Math.max(termoNormalizado.length, 1);
+    }
+
+    if (!ranges.length) {
+        elemento.textContent = textoOriginal;
+        return;
+    }
+
+    let html = "";
+    let cursor = 0;
+
+    ranges.forEach(([inicio, fim]) => {
+        html += escaparHtml(textoOriginal.slice(cursor, inicio));
+        html += `<mark class="search-match${classeAtiva}">${escaparHtml(textoOriginal.slice(inicio, fim))}</mark>`;
+        cursor = fim;
+    });
+
+    html += escaparHtml(textoOriginal.slice(cursor));
+    elemento.innerHTML = html;
+}
+
+function aplicarRealcesPesquisa() {
+    limparRealcesPesquisa();
+
+    const paginaAtual = obterPaginaAtualPesquisa();
+    searchMatchesAtuais.forEach((match, index) => {
+        if (match.pageIndex !== paginaAtual) return;
+
+        realcarElementoPesquisa(match.elemento, match.term, index === searchMatchIndexAtual);
+    });
+}
+
+function atualizarFeedbackPesquisa() {
+    if (!searchFeedbackElement) return;
+
+    if (!searchMatchesAtuais.length) {
+        searchFeedbackElement.textContent = "0/0";
+        return;
+    }
+
+    searchFeedbackElement.textContent = `${searchMatchIndexAtual + 1}/${searchMatchesAtuais.length}`;
+}
+
+function focarOcorrenciaPesquisa(index) {
+    if (!searchMatchesAtuais.length) {
+        searchMatchIndexAtual = -1;
+        aplicarRealcesPesquisa();
+        atualizarFeedbackPesquisa();
+        return;
+    }
+
+    searchMatchIndexAtual = (index + searchMatchesAtuais.length) % searchMatchesAtuais.length;
+    const match = searchMatchesAtuais[searchMatchIndexAtual];
+
+    irParaPaginaDaFigurinha(match.slot);
+    window.setTimeout(() => {
+        aplicarRealcesPesquisa();
+        atualizarFeedbackPesquisa();
+    }, 120);
+}
+
+function navegarPesquisa(direcao) {
+    if (!searchMatchesAtuais.length) return;
+    focarOcorrenciaPesquisa(searchMatchIndexAtual + direcao);
 }
 
 function fecharZoom() {
@@ -241,6 +327,7 @@ function criarPopupZoom() {
     dialog.innerHTML = `
         <div class="zoom-dialog-content">
             <h2 id="zoom-dialog-title" class="zoom-dialog-title">Figurinha ampliada</h2>
+            <p class="zoom-dialog-role"></p>
             <img class="zoom-dialog-img" alt="">
         </div>
     `;
@@ -270,11 +357,24 @@ async function zoom(id) {
         const figurinha = await response.json();
         const dialog = criarPopupZoom();
         const title = dialog.querySelector(".zoom-dialog-title");
+        const role = dialog.querySelector(".zoom-dialog-role");
         const img = dialog.querySelector(".zoom-dialog-img");
+        const screenId = `#${String(id).padStart(2, "0")}`;
+        const slot = Array.from(document.querySelectorAll(".sticker-slot")).find(elemento =>
+            elemento.querySelector(".slot-number")?.textContent.trim() === screenId
+        );
+        const nomeFigurinha = slot?.querySelector(".slot-name")?.dataset.searchOriginalText
+            || slot?.querySelector(".slot-name")?.textContent
+            || figurinha.nome;
+        const roleFigurinha = slot?.querySelector(".slot-role")?.dataset.searchOriginalText
+            || slot?.querySelector(".slot-role")?.textContent
+            || figurinha.categoria
+            || "";
 
-        title.textContent = figurinha.nome;
+        title.textContent = nomeFigurinha;
+        role.textContent = roleFigurinha;
         img.src = `${API_BASE_URL}${figurinha.imagem_url}`;
-        img.alt = figurinha.nome;
+        img.alt = nomeFigurinha;
 
         dialog.hidden = false;
         dialog.focus();
@@ -283,69 +383,30 @@ async function zoom(id) {
     }
 }
 
-async function pesquisarFigurinha(id) {
-    const termoPesquisa = String(id).trim();
+function pesquisarFigurinha(termoPesquisa) {
+    limparRealcesPesquisa();
+    searchMatchesAtuais = buscarOcorrenciasPesquisa(termoPesquisa);
 
-    if (!termoPesquisa) {
-        if (searchFeedbackElement) {
-            searchFeedbackElement.textContent = "Informe um ID, nome ou contribuição";
-            searchFeedbackElement.hidden = false;
-        }
+    if (!String(termoPesquisa).trim()) {
+        searchMatchIndexAtual = -1;
+        atualizarFeedbackPesquisa();
         return;
     }
 
-    const idFormatado = formatarIdFigurinha(termoPesquisa);
-
-    if (!idFormatado) {
-        const figurinhas = buscarFigurinhasPorTexto(termoPesquisa);
-
-        if (!figurinhas.length) {
-            if (searchFeedbackElement) {
-                searchFeedbackElement.textContent = "Figurinha não encontrada";
-                searchFeedbackElement.hidden = false;
-            }
-            return;
-        }
-
-        selecionarFigurinhas(figurinhas);
-        ocultarPopupPesquisa();
+    if (!searchMatchesAtuais.length) {
+        searchMatchIndexAtual = -1;
+        atualizarFeedbackPesquisa();
         return;
     }
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/figurinhas/${idFormatado.apiId}`);
+    const paginaAtual = obterPaginaAtualPesquisa();
+    const primeiraNaPaginaAtual = searchMatchesAtuais.findIndex(match => match.pageIndex === paginaAtual);
+    focarOcorrenciaPesquisa(primeiraNaPaginaAtual >= 0 ? primeiraNaPaginaAtual : 0);
 
-        if (!response.ok) {
-            const erroApi = await response.json().catch(() => null);
-            const mensagem = erroApi?.detail || `Erro na API: ${response.status} ${response.statusText}`;
-            throw new Error(mensagem);
-        }
-
-        await response.json();
-
-        const slotsNode = document.querySelectorAll('.sticker-slot');
-        const slotsArray = Array.from(slotsNode);
-        const figurinha = slotsArray.find(slot =>
-            slot.querySelector('.slot-number')?.textContent.trim() === idFormatado.screenId
-        );
-
-        if (!figurinha) {
-            if (searchFeedbackElement) {
-                searchFeedbackElement.textContent = "Figurinha não encontrada";
-                searchFeedbackElement.hidden = false;
-            }
-            return;
-        }
-
-        selecionarFigurinha(figurinha);
-        ocultarPopupPesquisa();
-    } catch (erro) {
-        if (searchFeedbackElement) {
-            searchFeedbackElement.textContent = erro.message;
-            searchFeedbackElement.hidden = false;
-        }
-        console.warn("⚠️  Não foi possível conectar à API do backend:", erro.message);
-        console.info("ℹ️  Inicie o servidor: cd backend/dia-3 && uvicorn main:app --reload");
+    const exatas = searchMatchesAtuais.filter(match => match.exact);
+    if (exatas.length === 1) {
+        focarOcorrenciaPesquisa(searchMatchesAtuais.indexOf(exatas[0]));
+        window.setTimeout(() => exatas[0].slot.click(), 180);
     }
 }
 
@@ -367,92 +428,74 @@ document.addEventListener("DOMContentLoaded", () => {
         dialog.id = "search-dialog";
         dialog.className = "search-dialog";
         dialog.hidden = true;
-        dialog.setAttribute("role", "dialog");
-        dialog.setAttribute("aria-modal", "true");
-        dialog.setAttribute("aria-labelledby", "search-dialog-title");
+        dialog.setAttribute("role", "search");
+        dialog.setAttribute("aria-label", "Pesquisar na pagina atual");
 
         dialog.innerHTML = `
             <div class="search-dialog-content">
-                <button type="button" class="search-close-btn" aria-label="Fechar pesquisa">
-                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
-                        <path fill="currentColor" d="M18.3,5.71L12,12l6.3,6.29-1.41,1.41L10.59,13.41,4.29,19.71,2.88,18.3,9.17,12,2.88,5.71,4.29,4.29l6.3,6.3,6.29-6.3,1.42,1.42Z" />
+                <input id="search_id" name="search_id" class="search-input" type="text" autocomplete="off" aria-label="Pesquisar" aria-describedby="search-feedback">
+                <span id="search-feedback" class="search-feedback" role="status" aria-live="polite">0/0</span>
+                <button type="button" class="search-nav-btn search-prev-btn" aria-label="Ocorrencia anterior">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7.41,15.41L12,10.83l4.59,4.58L18,14l-6,-6l-6,6l1.41,1.41Z" />
                     </svg>
                 </button>
-                <h2 id="search-dialog-title" class="search-dialog-title">Pesquisar figurinha</h2>
-                <form class="search-form" novalidate>
-                    <label class="search-label" for="search_id">ID, nome ou contribuição</label>
-                    <div class="search-row">
-                        <input id="search_id" name="search_id" class="search-input" type="text" autocomplete="off" aria-describedby="search-feedback" required>
-                        <button type="submit" class="search-submit-btn" aria-label="Pesquisar figurinha">
-                            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
-                                <path fill="currentColor" d="M9.5,3A6.5,6.5 0 0,1 16,9.5c0,1.61-.59,3.09-1.57,4.23l.27,.27h.8l5,4.99-1.49,1.49-4.99-5v-.8l-.27-.27A6.47,6.47 0 0,1 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3m0,2A4.5,4.5 0 0,0 5,9.5A4.5,4.5 0 0,0 9.5,14A4.5,4.5 0 0,0 14,9.5A4.5,4.5 0 0,0 9.5,5Z" />
-                            </svg>
-                        </button>
-                    </div>
-                    <p id="search-feedback" class="search-feedback" role="status" aria-live="polite" hidden></p>
-                </form>
+                <button type="button" class="search-nav-btn search-next-btn" aria-label="Proxima ocorrencia">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6l-6,-6l1.41,-1.41Z" />
+                    </svg>
+                </button>
+                <button type="button" class="search-close-btn" aria-label="Fechar pesquisa">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M18.3,5.71L12,12l6.3,6.29l-1.41,1.41L10.59,13.41L4.29,19.71L2.88,18.3L9.17,12L2.88,5.71L4.29,4.29l6.3,6.3l6.29,-6.3l1.42,1.42Z" />
+                    </svg>
+                </button>
             </div>
         `;
 
         document.body.appendChild(dialog);
 
         const input = dialog.querySelector("#search_id");
-        const form = dialog.querySelector(".search-form");
+        const previousButton = dialog.querySelector(".search-prev-btn");
+        const nextButton = dialog.querySelector(".search-next-btn");
         const closeButton = dialog.querySelector(".search-close-btn");
         searchFeedbackElement = dialog.querySelector("#search-feedback");
-
-        const focusableSelector = "button, input, [href], [tabindex]:not([tabindex='-1'])";
 
         function fecharPopupPesquisa() {
             dialog.hidden = true;
             input.value = "";
-            searchFeedbackElement.textContent = "";
-            searchFeedbackElement.hidden = true;
+            searchMatchesAtuais = [];
+            searchMatchIndexAtual = -1;
+            limparRealcesPesquisa();
+            atualizarFeedbackPesquisa();
             searchButton?.focus();
         }
 
         function abrirPopupPesquisa() {
-            removerEfeitoFigurinhaSelecionada();
-            input.value = "";
-            searchFeedbackElement.textContent = "";
-            searchFeedbackElement.hidden = true;
             dialog.hidden = false;
             input.focus();
+            input.select();
+            pesquisarFigurinha(input.value);
         }
 
-        form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            pesquisarFigurinha(input.value);
-        });
+        input.addEventListener("input", () => pesquisarFigurinha(input.value));
 
-        closeButton.addEventListener("click", fecharPopupPesquisa);
-
-        dialog.addEventListener("keydown", (e) => {
+        input.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
                 e.preventDefault();
                 fecharPopupPesquisa();
                 return;
             }
 
-            if (e.key !== "Tab") return;
-
-            const focusable = Array.from(dialog.querySelectorAll(focusableSelector))
-                .filter(element => !element.disabled && element.offsetParent !== null);
-
-            if (!focusable.length) return;
-
-            const first = focusable[0];
-            const last = focusable[focusable.length - 1];
-
-            if (e.shiftKey && document.activeElement === first) {
+            if (e.key === "Enter") {
                 e.preventDefault();
-                last.focus();
-            } else if (!e.shiftKey && document.activeElement === last) {
-                e.preventDefault();
-                first.focus();
+                navegarPesquisa(e.shiftKey ? -1 : 1);
             }
         });
 
+        previousButton.addEventListener("click", () => navegarPesquisa(-1));
+        nextButton.addEventListener("click", () => navegarPesquisa(1));
+        closeButton.addEventListener("click", fecharPopupPesquisa);
         searchButton?.addEventListener("click", abrirPopupPesquisa);
     }
 
@@ -721,13 +764,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Discrete arrow toggle depending on current page
         pageFlip.on("flip", (e) => {
-            if (manterEfeitoNoProximoFlip) {
-                manterEfeitoNoProximoFlip = false;
-            } else {
-                removerEfeitoFigurinhaSelecionada();
-            }
             const currentPage = e.data;
             atualizarControlesNavegacao(currentPage);
+            aplicarRealcesPesquisa();
 
             if (currentPage === pageFlip.getPageCount() - 1) {
                 exibe_estatisticas();
