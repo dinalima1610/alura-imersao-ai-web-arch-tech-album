@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alura Album - Copa do Mundo Tech</title>
+    <meta name="description"
+        content="Divirta-se colecionando figurinhas de personalidades da tecnologia. Explore um álbum construído com HTML5, CSS3, JS e integrado a uma API FastAPI.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,10 +16,18 @@
     <!-- Style -->
     <link rel="stylesheet" href="style.css">
 
-    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="icon" type="image/png" href="../favicon.png">
 </head>
 
 <body>
+
+
+    <!-- Search -->
+    <div class="tooltip-container pos-search">
+        <button id="search-btn" aria-label="Pesquisar">🔍</button>
+        <span class="tooltip-text">Pesquisar</span>
+    </div>
+
     <!-- Theme Toggle -->
     <div class="tooltip-container pos-theme-toggle">
         <button id="theme-toggle" aria-label="Alternar entre modo escuro e claro">☀️</button>
@@ -52,7 +62,7 @@
     </button>
 
     <!-- Album Container -->
-    <div class="album-viewport" id="album-viewport">
+    <main class="album-viewport" id="album-viewport">
         <div class="flip-book" id="book">
 
             <!-- PAGINA 0: CAPA -->
@@ -360,6 +370,11 @@
                             </div>
                             <span class="barcode-number">9 788575 228494</span>
                         </div>
+                        <div class="album-stats" id="album-stats" aria-live="polite">
+                            <p>Total de figurinhas: <span id="stats-total-album">0</span></p>
+                            <p>Coladas: <span id="stats-coladas">0</span></p>
+                            <p>Faltantes: <span id="stats-faltam">0</span></p>
+                        </div>
                     </div>
                     <div class="cover-back-footer">
                         <span>Imersão Julho • Alura • 2026</span>
@@ -370,12 +385,12 @@
             </div>
 
         </div>
-    </div>
+    </main>
 
     <!-- Page Flip Library -->
-    <script src=" https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
     <!-- Logic -->
-    <script src="app.js"></script>
+    <script defer src="app.js"></script>
 </body>
 
 </html>

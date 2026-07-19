@@ -79,7 +79,18 @@ figurinhas = [
 @app.get("/figurinhas")
 def listar_figurinhas():
     # Retorna a lista de figurinhas, convertida automaticamente para JSON pelo FastAPI
-    return figurinhas
+    return [figurinha for figurinha in figurinhas if isinstance(figurinha, dict)]
+
+@app.get("/figurinhas/total")
+def estatisticas_album(total_album: int = 0):
+    coladas = len(listar_figurinhas())
+    faltam = total_album - coladas
+
+    return {
+        "total_album": total_album,
+        "coladas": coladas,
+        "faltam": faltam
+    }
 
 @app.get("/figurinhas/{id}/imagem")
 def imagem_da_figurinha(id: int):
@@ -94,3 +105,37 @@ def imagem_da_figurinha(id: int):
 
     # Entrega os bytes da imagem (o FastAPI descobre o Content-Type pela extensão)
     return FileResponse(arquivos[0])
+
+@app.get("/figurinhas/{id}/exibir")
+def exibir_figurinha(id: int):
+    figurinha_encontrada = next((fig for fig in listar_figurinhas() if fig['id'] == id), None)
+
+    if figurinha_encontrada:
+        return figurinha_encontrada
+    raise HTTPException(status_code=404, detail="Figurinha não encontrada")
+
+@app.get("/figurinhas/{id}")
+def figurinha_by_id(id: int):
+    '''
+    # Percorre a lista de figurinhas em busca do ID correspondente
+    for figurinha in figurinhas:
+        if figurinha["id"] == id:
+            return figurinha
+    # Se a figurinha não for encontrada após percorrer a lista,
+    # lança uma exceção HTTP com status 404 (Not Found).
+    raise HTTPException(status_code=404, detail="Figurinha não encontrada")
+    '''
+
+    # Busca o dicionário onde o id é igual a 2
+    # O segundo argumento (None) é retornado caso o id não exista, evitando erros
+    # id = 2, saída: {'id': 2, 'nome': 'John McCarthy', 'categoria': 'IA', 'imagem_url': '/figurinhas/2/imagem'}
+    figurinha_encontrada = next((fig for fig in figurinhas if fig['id'] == id), None)
+    
+    '''
+    # Retorna uma lista com os dicionários correspondentes (pega o primeiro com [0])
+    # id = 2, saída: {'id': 2, 'nome': 'John McCarthy', 'categoria': 'IA', 'imagem_url': '/figurinhas/2/imagem'}
+    resultado = [fig for fig in figurinhas if fig['id'] == id][0]
+    '''
+    if figurinha_encontrada:
+        return figurinha_encontrada
+    raise HTTPException(status_code=404, detail="Figurinha não encontrada")
