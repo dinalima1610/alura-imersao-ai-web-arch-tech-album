@@ -112,6 +112,8 @@ let searchMatchesAtuais = [];
 let searchMatchIndexAtual = -1;
 let searchFeedbackElement = null;
 let zoomDialogElement = null;
+let mobileBackStateAtivo = false;
+let tratandoMobileBack = false;
 
 function atualizarControlesNavegacao(pageIndex) {
     const btnPrev = document.getElementById("btn-prev");
@@ -143,12 +145,13 @@ function irParaPaginaDaFigurinha(figurinha) {
     }
 }
 
-function normalizarTextoPesquisa(texto) {
-    return String(texto)
-        .trim()
+function normalizarTextoPesquisa(texto, trim = true) {
+    const normalizado = String(texto)
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
+
+    return trim ? normalizado.trim() : normalizado;
 }
 
 function escaparHtml(texto) {
@@ -178,6 +181,68 @@ function obterPaginaAtualPesquisa() {
     return albumPageFlip.getCurrentPageIndex();
 }
 
+function isMobileViewport() {
+    return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function zoomEstaAberto() {
+    return Boolean(zoomDialogElement && !zoomDialogElement.hidden);
+}
+
+function haAcaoAlbumParaVoltar() {
+    return zoomEstaAberto() || obterPaginaAtualPesquisa() > 0;
+}
+
+function prepararHistoricoMobileAlbum() {
+    if (!isMobileViewport() || tratandoMobileBack || mobileBackStateAtivo || !haAcaoAlbumParaVoltar()) return;
+
+    history.pushState({ albumBackState: true }, "", window.location.href);
+    mobileBackStateAtivo = true;
+}
+
+function liberarHistoricoMobileAlbumSeSemAcao() {
+    if (!isMobileViewport() || tratandoMobileBack || !mobileBackStateAtivo || haAcaoAlbumParaVoltar()) return;
+
+    tratandoMobileBack = true;
+    mobileBackStateAtivo = false;
+    history.back();
+
+    window.setTimeout(() => {
+        tratandoMobileBack = false;
+    }, 120);
+}
+
+function sincronizarHistoricoMobileAlbum() {
+    if (haAcaoAlbumParaVoltar()) {
+        prepararHistoricoMobileAlbum();
+    } else {
+        liberarHistoricoMobileAlbumSeSemAcao();
+    }
+}
+
+function obterLimitesPageFlip() {
+    if (!isMobileViewport()) {
+        return {
+            minWidth: 260,
+            maxWidth: 1000,
+            minHeight: 378,
+            maxHeight: 1350
+        };
+    }
+
+    const larguraDisponivel = Math.max(window.innerWidth - 20, 260);
+    const alturaDisponivel = Math.max(window.innerHeight - 88, 378);
+    const larguraPorAltura = Math.floor(alturaDisponivel * 550 / 800);
+    const maxWidth = Math.max(Math.min(larguraDisponivel, larguraPorAltura, 480), 260);
+
+    return {
+        minWidth: 260,
+        maxWidth,
+        minHeight: 378,
+        maxHeight: Math.max(Math.floor(maxWidth * 800 / 550), 378)
+    };
+}
+
 function buscarOcorrenciasPesquisa(texto) {
     const termoOriginal = String(texto).trim();
     const termoNormalizado = normalizarTextoPesquisa(termoOriginal);
@@ -192,16 +257,21 @@ function buscarOcorrenciasPesquisa(texto) {
             const elemento = slot.querySelector(selector);
             const textoCampo = elemento?.dataset.searchOriginalText ?? elemento?.textContent ?? "";
             const textoNormalizado = normalizarTextoPesquisa(textoCampo);
-            const indice = textoNormalizado.indexOf(termoNormalizado);
+            let indice = textoNormalizado.indexOf(termoNormalizado);
+            let occurrenceIndex = 0;
 
-            if (elemento && indice >= 0) {
+            while (elemento && indice >= 0) {
                 ocorrencias.push({
                     slot,
                     elemento,
                     pageIndex: obterIndicePaginaFigurinha(slot),
                     exact: textoNormalizado === termoNormalizado,
-                    term: termoOriginal
+                    term: termoOriginal,
+                    occurrenceIndex
                 });
+
+                occurrenceIndex += 1;
+                indice = textoNormalizado.indexOf(termoNormalizado, indice + Math.max(termoNormalizado.length, 1));
             }
         });
     });
@@ -209,19 +279,18 @@ function buscarOcorrenciasPesquisa(texto) {
     return ocorrencias;
 }
 
-function realcarElementoPesquisa(elemento, termo, ativo) {
+function realcarElementoPesquisa(elemento, termo, activeOccurrenceIndex = -1) {
     if (!elemento.dataset.searchOriginalText) {
         elemento.dataset.searchOriginalText = elemento.textContent;
     }
 
     const textoOriginal = elemento.dataset.searchOriginalText;
-    const classeAtiva = ativo ? " search-match-active" : "";
     const termoNormalizado = normalizarTextoPesquisa(termo);
     const mapa = [];
     let textoNormalizado = "";
 
     Array.from(textoOriginal).forEach((char, originalIndex) => {
-        const normalizado = normalizarTextoPesquisa(char);
+        const normalizado = normalizarTextoPesquisa(char, false);
 
         Array.from(normalizado).forEach(normalizedChar => {
             textoNormalizado += normalizedChar;
@@ -251,7 +320,8 @@ function realcarElementoPesquisa(elemento, termo, ativo) {
     let html = "";
     let cursor = 0;
 
-    ranges.forEach(([inicio, fim]) => {
+    ranges.forEach(([inicio, fim], occurrenceIndex) => {
+        const classeAtiva = occurrenceIndex === activeOccurrenceIndex ? " search-match-active" : "";
         html += escaparHtml(textoOriginal.slice(cursor, inicio));
         html += `<mark class="search-match${classeAtiva}">${escaparHtml(textoOriginal.slice(inicio, fim))}</mark>`;
         cursor = fim;
@@ -264,11 +334,24 @@ function realcarElementoPesquisa(elemento, termo, ativo) {
 function aplicarRealcesPesquisa() {
     limparRealcesPesquisa();
 
-    const paginaAtual = obterPaginaAtualPesquisa();
-    searchMatchesAtuais.forEach((match, index) => {
-        if (match.pageIndex !== paginaAtual) return;
+    const matchesPorElemento = new Map();
 
-        realcarElementoPesquisa(match.elemento, match.term, index === searchMatchIndexAtual);
+    searchMatchesAtuais.forEach((match, index) => {
+        const grupo = matchesPorElemento.get(match.elemento) || {
+            elemento: match.elemento,
+            term: match.term,
+            activeOccurrenceIndex: -1
+        };
+
+        if (index === searchMatchIndexAtual) {
+            grupo.activeOccurrenceIndex = match.occurrenceIndex;
+        }
+
+        matchesPorElemento.set(match.elemento, grupo);
+    });
+
+    matchesPorElemento.forEach(grupo => {
+        realcarElementoPesquisa(grupo.elemento, grupo.term, grupo.activeOccurrenceIndex);
     });
 }
 
@@ -309,6 +392,7 @@ function navegarPesquisa(direcao) {
 function fecharZoom() {
     if (zoomDialogElement) {
         zoomDialogElement.hidden = true;
+        sincronizarHistoricoMobileAlbum();
     }
 }
 
@@ -378,6 +462,7 @@ async function zoom(id) {
 
         dialog.hidden = false;
         dialog.focus();
+        prepararHistoricoMobileAlbum();
     } catch (erro) {
         console.warn("⚠️  Não foi possível exibir a figurinha:", erro.message);
     }
@@ -407,6 +492,8 @@ function pesquisarFigurinha(termoPesquisa) {
     if (exatas.length === 1) {
         focarOcorrenciaPesquisa(searchMatchesAtuais.indexOf(exatas[0]));
         window.setTimeout(() => exatas[0].slot.click(), 180);
+    } else if (exatas.length === 0 && searchMatchesAtuais.length === 1) {
+        window.setTimeout(() => searchMatchesAtuais[0].slot.click(), 180);
     }
 }
 
@@ -422,6 +509,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let isMuted = false;
     let pageFlip = null;
+    let paperAudioCtx = null;
+    let paperAudioResumePending = false;
+    let pendingFlipSoundFallback = null;
+    let lastPaperTurnSoundAt = 0;
 
     function criarPopupPesquisa() {
         const dialog = document.createElement("section");
@@ -433,7 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dialog.innerHTML = `
             <div class="search-dialog-content">
-                <input id="search_id" name="search_id" class="search-input" type="text" autocomplete="off" aria-label="Pesquisar" aria-describedby="search-feedback">
+                <input id="search-term" name="search-term" class="search-input" type="text" autocomplete="off" aria-label="Pesquisar" aria-describedby="search-feedback">
                 <span id="search-feedback" class="search-feedback" role="status" aria-live="polite">0/0</span>
                 <button type="button" class="search-nav-btn search-prev-btn" aria-label="Ocorrencia anterior">
                     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -455,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.body.appendChild(dialog);
 
-        const input = dialog.querySelector("#search_id");
+        const input = dialog.querySelector("#search-term");
         const previousButton = dialog.querySelector(".search-prev-btn");
         const nextButton = dialog.querySelector(".search-next-btn");
         const closeButton = dialog.querySelector(".search-close-btn");
@@ -483,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
         input.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
                 e.preventDefault();
+                e.stopPropagation();
                 fecharPopupPesquisa();
                 return;
             }
@@ -490,6 +582,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === "Enter") {
                 e.preventDefault();
                 navegarPesquisa(e.shiftKey ? -1 : 1);
+            }
+        });
+
+        dialog.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                fecharPopupPesquisa();
             }
         });
 
@@ -501,20 +600,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
     criarPopupPesquisa();
 
+    window.addEventListener("popstate", () => {
+        if (!isMobileViewport()) {
+            mobileBackStateAtivo = false;
+            return;
+        }
+
+        mobileBackStateAtivo = false;
+
+        if (!haAcaoAlbumParaVoltar()) return;
+
+        tratandoMobileBack = true;
+
+        if (zoomEstaAberto()) {
+            fecharZoom();
+        } else if (pageFlip && pageFlip.getCurrentPageIndex() > 0) {
+            virarPaginaComSom(-1);
+            atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
+        }
+
+        window.setTimeout(() => {
+            tratandoMobileBack = false;
+            prepararHistoricoMobileAlbum();
+        }, 900);
+    });
+
     // 1. Initialize St.PageFlip
     try {
+        const limitesPageFlip = obterLimitesPageFlip();
+
         pageFlip = new St.PageFlip(bookElement, {
             width: 550, // Base page width
             height: 800, // Base page height
             size: "stretch",
-            minWidth: 315,
-            maxWidth: 1000,
-            minHeight: 420,
-            maxHeight: 1350,
+            minWidth: limitesPageFlip.minWidth,
+            maxWidth: limitesPageFlip.maxWidth,
+            minHeight: limitesPageFlip.minHeight,
+            maxHeight: limitesPageFlip.maxHeight,
             drawShadow: true,
             maxShadowOpacity: 0.4, // Aumenta levemente contraste da sombra
             showCover: true,
-            mobileScrollSupport: true,
+            usePortrait: true,
+            mobileScrollSupport: false,
             useMouseEvents: false, // Desativa gestos padrão do StPageFlip para evitar cliques indesejados nas bordas/páginas
             showPageCorners: false, // Remove dobras dos cantos no hover
             disableFlipByClick: true, // Garante que a virada por cliques simples esteja desativada
@@ -532,6 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let startY = 0;
         let dragStarted = false;
         let touchHandledBySwipe = false;
+        let touchHandledByPinch = false;
 
         // Monitora o mousedown/touchstart em cada página para iniciar a intenção de arraste
         document.querySelectorAll(".page").forEach((page, index) => {
@@ -546,12 +674,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             page.addEventListener("touchstart", (e) => {
                 if (e.target.closest("button") || e.target.closest("a")) return;
+                if (e.touches.length > 1) {
+                    touchHandledByPinch = true;
+                    isClicking = false;
+                    dragStarted = false;
+                    touchHandledBySwipe = false;
+                    activeDragPage = null;
+                    document.body.classList.remove("dragging");
+                    return;
+                }
+
                 const touch = e.touches[0];
                 isClicking = true;
                 startX = touch.clientX;
                 startY = touch.clientY;
                 dragStarted = false;
                 touchHandledBySwipe = false;
+                touchHandledByPinch = false;
                 activeDragPage = { page, index };
             });
         });
@@ -604,6 +743,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const bookRect = bookElement.getBoundingClientRect();
                 const relX = clientX - bookRect.left;
                 const relY = clientY - bookRect.top;
+                tocarSomViradaPorInteracao();
                 pageFlip.userStop({ x: relX, y: relY }, isTouch);
             }
             isClicking = false;
@@ -617,6 +757,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         window.addEventListener("touchmove", (e) => {
+            if (e.touches.length > 1 || touchHandledByPinch) {
+                touchHandledByPinch = true;
+                isClicking = false;
+                dragStarted = false;
+                touchHandledBySwipe = false;
+                activeDragPage = null;
+                document.body.classList.remove("dragging");
+                return;
+            }
+
             if (e.touches.length > 0) {
                 const touch = e.touches[0];
 
@@ -640,20 +790,34 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         window.addEventListener("touchend", (e) => {
+            if (touchHandledByPinch) {
+                if (e.touches.length === 0) {
+                    touchHandledByPinch = false;
+                }
+
+                isClicking = false;
+                dragStarted = false;
+                touchHandledBySwipe = false;
+                activeDragPage = null;
+                document.body.classList.remove("dragging");
+                return;
+            }
+
             const touch = e.changedTouches[0] || e.touches[0];
             if (isMobileViewport() && touchHandledBySwipe && touch) {
                 const deltaX = touch.clientX - startX;
 
                 if (deltaX > 0) {
-                    pageFlip.turnToPrevPage();
+                    virarPaginaComSom(-1);
                 } else {
-                    pageFlip.turnToNextPage();
+                    virarPaginaComSom(1);
                 }
 
                 atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
                 isClicking = false;
                 dragStarted = false;
                 touchHandledBySwipe = false;
+                touchHandledByPinch = false;
                 activeDragPage = null;
                 document.body.classList.remove("dragging");
                 return;
@@ -664,6 +828,15 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 handleRelease(startX, startY, true);
             }
+        });
+
+        window.addEventListener("touchcancel", () => {
+            isClicking = false;
+            dragStarted = false;
+            touchHandledBySwipe = false;
+            touchHandledByPinch = false;
+            activeDragPage = null;
+            document.body.classList.remove("dragging");
         });
 
         // Show book after successful initialization
@@ -678,14 +851,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 2. Sound Effect Generator (Web Audio API)
+    function obterPaperAudioContext() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return null;
+
+        if (!paperAudioCtx) {
+            paperAudioCtx = new AudioContext();
+        }
+
+        return paperAudioCtx;
+    }
+
+    function desbloquearAudioVirada() {
+        if (isMuted) return;
+
+        const audioCtx = obterPaperAudioContext();
+        if (audioCtx?.state === "suspended") {
+            audioCtx.resume().catch(() => {});
+        }
+    }
+
     function playPaperTurnSound() {
         if (isMuted) return;
 
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
+            const audioCtx = obterPaperAudioContext();
+            if (!audioCtx) return;
+            if (audioCtx.state === "suspended") {
+                if (paperAudioResumePending) return;
 
-            const audioCtx = new AudioContext();
+                paperAudioResumePending = true;
+                audioCtx.resume()
+                    .then(() => {
+                        paperAudioResumePending = false;
+                        playPaperTurnSound();
+                    })
+                    .catch(() => {
+                        paperAudioResumePending = false;
+                    });
+                return;
+            }
+
             const duration = 0.45; // seconds
             const sampleRate = audioCtx.sampleRate;
             const bufferSize = sampleRate * duration;
@@ -736,9 +942,67 @@ document.addEventListener("DOMContentLoaded", () => {
             lowpassFilter.connect(audioCtx.destination);
 
             noiseNode.start();
+            lastPaperTurnSoundAt = performance.now();
         } catch (e) {
             console.warn("Falha ao tocar som de virada de página:", e);
         }
+    }
+
+    function tocarSomViradaSeNecessario() {
+        if (performance.now() - lastPaperTurnSoundAt < 250) return;
+
+        playPaperTurnSound();
+    }
+
+    function tocarSomViradaPorInteracao() {
+        tocarSomViradaSeNecessario();
+
+        window.clearTimeout(pendingFlipSoundFallback);
+        pendingFlipSoundFallback = window.setTimeout(() => {
+            tocarSomViradaSeNecessario();
+            pendingFlipSoundFallback = null;
+        }, 120);
+    }
+
+    function virarPaginaComSom(direcao) {
+        if (!pageFlip) return false;
+
+        const paginaAtual = pageFlip.getCurrentPageIndex();
+        const totalPaginas = pageFlip.getPageCount();
+        const podeVoltar = direcao < 0 && paginaAtual > 0;
+        const podeAvancar = direcao > 0 && paginaAtual < totalPaginas - 1;
+        const paginaEsperada = paginaAtual + direcao;
+
+        if (!podeVoltar && !podeAvancar) return false;
+
+        tocarSomViradaPorInteracao();
+
+        if (direcao < 0 && isMobileViewport() && typeof pageFlip.turnToPage === "function") {
+            pageFlip.turnToPage(paginaEsperada);
+        } else if (direcao < 0) {
+            pageFlip.flipPrev();
+        } else {
+            pageFlip.flipNext();
+        }
+
+        window.setTimeout(() => {
+            if (!pageFlip || pageFlip.getCurrentPageIndex() !== paginaAtual) return;
+
+            if (direcao < 0 && typeof pageFlip.turnToPrevPage === "function") {
+                pageFlip.turnToPrevPage();
+            } else if (direcao > 0 && typeof pageFlip.turnToNextPage === "function") {
+                pageFlip.turnToNextPage();
+            } else if (typeof pageFlip.turnToPage === "function") {
+                pageFlip.turnToPage(paginaEsperada);
+            }
+
+            window.setTimeout(() => {
+                atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
+                sincronizarHistoricoMobileAlbum();
+            }, 60);
+        }, 860);
+
+        return true;
     }
 
     // 3. Audio State Controls
@@ -750,6 +1014,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             iconOn.classList.remove("hidden");
             iconOff.classList.add("hidden");
+            desbloquearAudioVirada();
         }
     });
 
@@ -758,7 +1023,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Play turn sound when page starts flipping
         pageFlip.on("changeState", (e) => {
             if (e.data === "flipping") {
-                playPaperTurnSound();
+                window.clearTimeout(pendingFlipSoundFallback);
+                pendingFlipSoundFallback = null;
+                tocarSomViradaSeNecessario();
             }
         });
 
@@ -767,6 +1034,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const currentPage = e.data;
             atualizarControlesNavegacao(currentPage);
             aplicarRealcesPesquisa();
+            sincronizarHistoricoMobileAlbum();
 
             if (currentPage === pageFlip.getPageCount() - 1) {
                 exibe_estatisticas();
@@ -774,22 +1042,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Click events for navigational arrows
-        btnPrev.addEventListener("click", () => {
-            pageFlip.turnToPrevPage();
+        btnPrev.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            virarPaginaComSom(-1);
             atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
         });
 
-        btnNext.addEventListener("click", () => {
-            pageFlip.turnToNextPage();
+        btnNext.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            virarPaginaComSom(1);
             atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
         });
 
         // Keyboard events for navigational arrows
         document.addEventListener("keydown", (e) => {
+            if (e.target.closest("input, textarea, select, [contenteditable='true']")) return;
+
             if (e.key === "ArrowLeft") {
-                pageFlip.flipPrev();
+                if (virarPaginaComSom(-1)) {
+                    e.preventDefault();
+                }
             } else if (e.key === "ArrowRight") {
-                pageFlip.flipNext();
+                if (virarPaginaComSom(1)) {
+                    e.preventDefault();
+                }
             }
         });
 

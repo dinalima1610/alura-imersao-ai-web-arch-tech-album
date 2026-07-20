@@ -43,6 +43,7 @@ body {
   color: var(--color-new-black);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -163,8 +164,7 @@ body {
 
 .search-match-active {
   background: var(--color-dev-blue);
-  color: var(--color-white-snow);
-  box-shadow: 0 0 0 1px var(--color-deep-cyan);
+  color: #F4F5F6;
 }
 
 .zoom-dialog[hidden] {
@@ -1374,74 +1374,200 @@ body.dragging * {
   }
 }
 
+@media (max-height: 760px) {
+  body {
+    align-items: flex-start;
+    padding-block: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .cover-content,
+  .cover-back-content {
+    padding-block: 28px;
+  }
+
+  .cover-body,
+  .cover-back-body {
+    gap: 8px;
+  }
+
+  .cover-seal {
+    font-size: 0.66rem;
+    letter-spacing: 3px;
+    padding: 5px 14px;
+  }
+
+  .cover-title {
+    font-size: 3rem;
+  }
+
+  .cover-subtitle {
+    font-size: 1.3rem;
+    letter-spacing: 7px;
+    margin-bottom: 10px;
+  }
+
+  .cover-art {
+    width: 170px;
+    height: 210px;
+  }
+
+  .tech-sphere {
+    transform: scale(0.78);
+  }
+
+  .cover-footer-text {
+    margin-top: 10px;
+  }
+
+  .cover-back-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .cover-back-body {
+    gap: 12px;
+  }
+
+  .summary-text {
+    line-height: 1.4;
+  }
+
+  .barcode-container {
+    padding: 8px 14px;
+  }
+
+  .barcode {
+    height: 30px;
+  }
+
+  .album-stats {
+    padding: 8px 12px;
+    line-height: 1.3;
+  }
+}
+
 @media (max-width: 768px) {
+  html,
+  body,
+  .album-viewport,
+  .flip-book,
+  .page {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  body {
+    padding-block: 58px 12px;
+  }
 
   /* In portrait/mobile mode, StPageFlip will show single pages */
   .album-viewport {
+    width: min(calc(100vw - 20px), calc((100dvh - 88px) * 0.6875), 480px);
+    height: min(calc(100dvh - 88px), calc((100vw - 20px) * 1.4545), 698px);
+    min-width: 260px;
+    min-height: 378px;
+    padding: 0;
+    margin-top: 0;
+  }
+
+  .flip-book {
     width: 100%;
-    max-width: 480px;
     height: 100%;
-    min-height: 580px;
-    padding: 10px;
+    max-width: 100%;
+  }
+
+  .flip-book.stf__parent,
+  .flip-book .stf__wrapper,
+  .flip-book .stf__block {
+    max-width: 100% !important;
+  }
+
+  .flip-book .stf__wrapper {
+    overflow: hidden;
   }
 
   .page {
     width: 100%;
-    height: 580px;
+    height: 100%;
   }
 
   .page-content {
-    padding: 25px 20px;
+    padding: clamp(14px, 5.2vw, 25px) clamp(12px, 4.6vw, 20px);
   }
 
   .page-header {
-    margin-bottom: 15px;
+    margin-bottom: clamp(8px, 2.8vw, 15px);
+    gap: 6px;
+    padding-bottom: 8px;
   }
 
   .page-title {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
+    line-height: 1.1;
   }
 
   .stickers-grid {
-    gap: 10px;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: clamp(6px, 2.5vw, 10px);
+    min-height: 0;
   }
 
   .sticker-slot {
-    min-height: 100px;
-    padding: 6px;
+    min-height: 0;
+    padding: clamp(4px, 1.8vw, 6px);
   }
 
   .special-slot {
-    min-height: 110px;
+    min-height: 0;
     width: 90%;
   }
 
   .slot-number {
-    width: 32px;
-    height: 32px;
-    font-size: 1.1rem;
-    margin-bottom: 5px;
+    width: clamp(26px, 8vw, 32px);
+    height: clamp(26px, 8vw, 32px);
+    font-size: 1rem;
+    margin-bottom: 4px;
   }
 
   .slot-name {
-    font-size: 0.8rem;
+    font-size: 0.76rem;
+    line-height: 1.15;
   }
 
   .slot-role {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
+    line-height: 1.18;
+  }
+
+  .sticker-slot:has(.sticker-img) .slot-name {
+    font-size: 0.72rem;
+    padding: 4px 5px 6px;
+  }
+
+  .sticker-slot:has(.sticker-img) .slot-role {
+    font-size: 0.58rem;
+    padding: 14px 3px 5px;
+    line-height: 1.15;
   }
 
   .cover-content {
-    padding: 30px 15px;
+    padding: clamp(18px, 6vw, 30px) 15px;
   }
 
   .cover-title {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
+    line-height: 0.95;
+  }
+
+  .cover-subtitle {
+    font-size: 1.1rem;
+    letter-spacing: 6px;
+    margin-bottom: 12px;
   }
 
   .cover-art {
-    width: 130px;
-    height: 180px;
+    width: clamp(104px, 35vw, 130px);
+    height: clamp(142px, 48vw, 180px);
   }
 
   .tech-sphere {
@@ -1450,6 +1576,47 @@ body.dragging * {
 
   .mini-card {
     display: none !important;
+  }
+
+  .cover-footer-text,
+  .cover-footer,
+  .cover-back-footer,
+  .cover-back-footer-by {
+    letter-spacing: 1px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .cover-back-content {
+    padding: clamp(18px, 6vw, 30px) 16px;
+  }
+
+  .cover-back-header h2 {
+    font-size: 1.7rem;
+    letter-spacing: 2px;
+  }
+
+  .cover-back-body {
+    gap: 14px;
+  }
+
+  .summary-text {
+    max-width: 95%;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .tech-logo-collage {
+    font-size: 0.66rem;
+    line-height: 1.35;
+  }
+
+  .barcode-container {
+    padding: 9px 14px;
+  }
+
+  .barcode {
+    height: 32px;
   }
 
   .nav-btn {
@@ -1514,5 +1681,181 @@ body.dragging * {
   .search-dialog-content {
     width: 100%;
     grid-template-columns: minmax(90px, 1fr) auto 34px 34px 34px;
+  }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  body {
+    padding-block: 54px 10px;
+  }
+
+  .album-viewport {
+    width: min(calc(100vw - 16px), calc((100dvh - 82px) * 0.6875));
+    height: min(calc(100dvh - 82px), calc((100vw - 16px) * 1.4545));
+  }
+
+  .page-content {
+    padding: 12px 10px;
+  }
+
+  .page-header {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+
+  .tech-badge {
+    font-size: 0.64rem;
+    padding: 3px 8px;
+    letter-spacing: 1px;
+  }
+
+  .page-title {
+    font-size: 1rem;
+  }
+
+  .stickers-grid {
+    gap: 5px;
+  }
+
+  .slot-number {
+    width: 26px;
+    height: 26px;
+    font-size: 0.9rem;
+  }
+
+  .slot-name {
+    font-size: 0.68rem;
+  }
+
+  .slot-role {
+    font-size: 0.56rem;
+  }
+
+  .sticker-slot:has(.sticker-img) .slot-name {
+    font-size: 0.64rem;
+    padding: 3px 4px 5px;
+  }
+
+  .sticker-slot:has(.sticker-img) .slot-role {
+    font-size: 0.52rem;
+    padding: 12px 2px 4px;
+  }
+
+  .page-footer {
+    margin-top: 8px;
+    font-size: 0.66rem;
+  }
+
+  .cover-title {
+    font-size: 1.9rem;
+  }
+
+  .cover-subtitle {
+    font-size: 0.95rem;
+    letter-spacing: 4px;
+  }
+
+  .cover-footer-text {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 768px) and (max-height: 560px) {
+  body {
+    padding-block: 48px 10px;
+  }
+
+  .album-viewport {
+    width: min(calc(100vw - 16px), calc((100dvh - 58px) * 0.6875), 480px);
+    height: min(calc(100dvh - 58px), calc((100vw - 16px) * 1.4545), 698px);
+  }
+
+  .cover-content,
+  .cover-back-content {
+    padding: 12px 12px;
+  }
+
+  .cover-seal {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+  }
+
+  .cover-body {
+    gap: 5px;
+  }
+
+  .cover-title {
+    font-size: 1.65rem;
+    letter-spacing: 4px;
+  }
+
+  .cover-subtitle {
+    font-size: 0.82rem;
+    letter-spacing: 4px;
+    margin-bottom: 4px;
+  }
+
+  .cover-art {
+    width: 92px;
+    height: 118px;
+  }
+
+  .tech-sphere {
+    transform: scale(0.5);
+  }
+
+  .cover-footer-text {
+    margin-top: 4px;
+    font-size: 0.58rem;
+    line-height: 1.2;
+    letter-spacing: 0.8px;
+  }
+
+  .cover-footer,
+  .cover-back-footer,
+  .cover-back-footer-by {
+    font-size: 0.58rem;
+    line-height: 1.25;
+    letter-spacing: 0.8px;
+  }
+
+  .cover-back-header h2 {
+    font-size: 1.35rem;
+    letter-spacing: 1.5px;
+  }
+
+  .cover-back-body {
+    gap: 8px;
+  }
+
+  .tech-logo-collage {
+    font-size: 0.56rem;
+    line-height: 1.25;
+  }
+
+  .summary-text {
+    font-size: 0.64rem;
+    line-height: 1.25;
+    max-width: 100%;
+  }
+
+  .barcode-container {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .barcode {
+    height: 24px;
+  }
+
+  .barcode-number {
+    font-size: 0.6rem;
+  }
+
+  .album-stats {
+    padding: 6px 10px;
+    font-size: 0.62rem;
+    line-height: 1.25;
   }
 }
