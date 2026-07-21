@@ -92,7 +92,8 @@ def listar_figurinhas():
 @app.get("/figurinhas/total")
 def estatisticas_album(total_album: int = 0):
     coladas = len(listar_figurinhas())
-    faltam = total_album - coladas
+    total_album = max(total_album, coladas)
+    faltam = max(total_album - coladas, 0)
 
     return {
         "total_album": total_album,

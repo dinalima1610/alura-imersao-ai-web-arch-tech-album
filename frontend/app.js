@@ -71,7 +71,11 @@ async function preencherFigurinhas() {
 }
 
 function total_slots_album() {
-    return document.querySelectorAll('.sticker-slot').length;
+    const ids = Array.from(document.querySelectorAll(".sticker-slot .slot-number"))
+        .map(elemento => elemento.textContent.trim())
+        .filter(Boolean);
+
+    return new Set(ids).size;
 }
 
 async function estatisticas_album() {
