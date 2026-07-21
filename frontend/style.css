@@ -1447,15 +1447,21 @@ body.dragging * {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse), (any-pointer: coarse) {
   html,
   body,
   .album-viewport,
+  .album-viewport *,
   .flip-book,
+  .flip-book.stf__parent,
+  .flip-book .stf__wrapper,
+  .flip-book .stf__block,
   .page {
-    touch-action: pan-x pan-y pinch-zoom;
+    touch-action: pan-x pan-y pinch-zoom !important;
   }
+}
 
+@media (max-width: 768px) {
   body {
     padding-block: 58px 12px;
   }

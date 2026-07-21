@@ -660,11 +660,49 @@ document.addEventListener("DOMContentLoaded", () => {
         let dragStarted = false;
         let touchHandledBySwipe = false;
         let touchHandledByPinch = false;
+        let shiftKeyAtivo = false;
+        const passiveTouchOptions = { passive: true };
+        const isMobileGestureMode = () => isMobileViewport() || window.matchMedia("(pointer: coarse), (any-pointer: coarse)").matches;
+        const isChromeDevToolsPinchSimulation = (event) => event.shiftKey || shiftKeyAtivo;
+
+        const limparEstadoArrasteAlbum = () => {
+            isClicking = false;
+            dragStarted = false;
+            touchHandledBySwipe = false;
+            activeDragPage = null;
+            document.body.classList.remove("dragging");
+        };
+
+        const cancelarArrasteAlbumParaPinch = () => {
+            limparEstadoArrasteAlbum();
+            touchHandledByPinch = true;
+        };
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Shift") {
+                shiftKeyAtivo = true;
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === "Shift") {
+                shiftKeyAtivo = false;
+            }
+        });
+
+        window.addEventListener("blur", () => {
+            shiftKeyAtivo = false;
+        });
 
         // Monitora o mousedown/touchstart em cada página para iniciar a intenção de arraste
         document.querySelectorAll(".page").forEach((page, index) => {
             page.addEventListener("mousedown", (e) => {
                 if (e.target.closest("button") || e.target.closest("a")) return;
+                if (isMobileGestureMode() || isChromeDevToolsPinchSimulation(e)) {
+                    cancelarArrasteAlbumParaPinch();
+                    return;
+                }
+
                 isClicking = true;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -674,13 +712,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             page.addEventListener("touchstart", (e) => {
                 if (e.target.closest("button") || e.target.closest("a")) return;
-                if (e.touches.length > 1) {
-                    touchHandledByPinch = true;
-                    isClicking = false;
-                    dragStarted = false;
-                    touchHandledBySwipe = false;
-                    activeDragPage = null;
-                    document.body.classList.remove("dragging");
+                if (e.touches.length > 1 || isChromeDevToolsPinchSimulation(e)) {
+                    cancelarArrasteAlbumParaPinch();
                     return;
                 }
 
@@ -692,10 +725,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 touchHandledBySwipe = false;
                 touchHandledByPinch = false;
                 activeDragPage = { page, index };
-            });
+            }, passiveTouchOptions);
         });
-
-        const isMobileViewport = () => window.matchMedia("(max-width: 768px)").matches;
 
         // Executa o movimento de dobra apenas se o mouse/dedo se mover além de um limiar (threshold)
         const handleMove = (clientX, clientY, isTouch = false) => {
@@ -753,24 +784,24 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         window.addEventListener("mousemove", (e) => {
+            if (isMobileGestureMode() || isChromeDevToolsPinchSimulation(e)) {
+                cancelarArrasteAlbumParaPinch();
+                return;
+            }
+
             handleMove(e.clientX, e.clientY, false);
         });
 
         window.addEventListener("touchmove", (e) => {
-            if (e.touches.length > 1 || touchHandledByPinch) {
-                touchHandledByPinch = true;
-                isClicking = false;
-                dragStarted = false;
-                touchHandledBySwipe = false;
-                activeDragPage = null;
-                document.body.classList.remove("dragging");
+            if (e.touches.length > 1 || touchHandledByPinch || isChromeDevToolsPinchSimulation(e)) {
+                cancelarArrasteAlbumParaPinch();
                 return;
             }
 
             if (e.touches.length > 0) {
                 const touch = e.touches[0];
 
-                if (isMobileViewport() && isClicking && activeDragPage) {
+                if (isMobileGestureMode() && isClicking && activeDragPage) {
                     const deltaX = touch.clientX - startX;
                     const deltaY = touch.clientY - startY;
 
@@ -783,9 +814,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 handleMove(touch.clientX, touch.clientY, true);
             }
-        });
+        }, passiveTouchOptions);
 
         window.addEventListener("mouseup", (e) => {
+            if (isMobileGestureMode() || isChromeDevToolsPinchSimulation(e)) {
+                limparEstadoArrasteAlbum();
+                touchHandledByPinch = false;
+                return;
+            }
+
+            if (touchHandledByPinch) {
+                limparEstadoArrasteAlbum();
+                touchHandledByPinch = false;
+                return;
+            }
+
             handleRelease(e.clientX, e.clientY, false);
         });
 
@@ -795,16 +838,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     touchHandledByPinch = false;
                 }
 
-                isClicking = false;
-                dragStarted = false;
-                touchHandledBySwipe = false;
-                activeDragPage = null;
-                document.body.classList.remove("dragging");
+                limparEstadoArrasteAlbum();
                 return;
             }
 
             const touch = e.changedTouches[0] || e.touches[0];
-            if (isMobileViewport() && touchHandledBySwipe && touch) {
+            if (isMobileGestureMode() && touchHandledBySwipe && touch) {
                 const deltaX = touch.clientX - startX;
 
                 if (deltaX > 0) {
@@ -814,12 +853,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 atualizarControlesNavegacao(pageFlip.getCurrentPageIndex());
-                isClicking = false;
-                dragStarted = false;
-                touchHandledBySwipe = false;
                 touchHandledByPinch = false;
-                activeDragPage = null;
-                document.body.classList.remove("dragging");
+                limparEstadoArrasteAlbum();
                 return;
             }
 
@@ -828,16 +863,12 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 handleRelease(startX, startY, true);
             }
-        });
+        }, passiveTouchOptions);
 
         window.addEventListener("touchcancel", () => {
-            isClicking = false;
-            dragStarted = false;
-            touchHandledBySwipe = false;
             touchHandledByPinch = false;
-            activeDragPage = null;
-            document.body.classList.remove("dragging");
-        });
+            limparEstadoArrasteAlbum();
+        }, passiveTouchOptions);
 
         // Show book after successful initialization
         bookElement.style.display = "block";
